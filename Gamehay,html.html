@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AetherCloud - Next-Gen File Hub</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at 10% 20%, rgb(15, 23, 42) 0%, rgb(30, 27, 75) 90%);
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card-hover:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .glass-modal {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        .blob-glow {
+            animation: pulseGlow 8s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="text-slate-100 flex flex-col min-h-screen relative overflow-x-hidden selection:bg-indigo-500 selection:text-white">
+
+    <div class="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none blob-glow"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-fuchsia-600/20 rounded-full blur-[120px] pointer-events-none blob-glow" style="animation-delay: 4s;"></div>
+
+    <header class="w-full border-b border-white/10 glass-card sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                <i class="fa-solid fa-cloud-arrow-up text-white text-lg"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-indigo-200 to-indigo-400 bg-clip-text text-transparent">AetherCloud</h1>
+                <p class="text-xs text-slate-400">Secure Modern Storage Hub</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full">
+                <i class="fa-solid fa-database text-indigo-400"></i>
+                <span id="storage-summary-text">0 MB used of 1 GB</span>
+            </div>
+            <button onclick="shareWebAppLink()" class="bg-white/10 hover:bg-white/20 border border-white/10 text-white font-medium px-3.5 py-2 rounded-xl text-sm transition-all duration-300 flex items-center space-x-2" title="Share Website Link">
+                <i class="fa-solid fa-share-nodes text-indigo-400"></i>
+                <span class="hidden md:inline">Share Web Link</span>
+            </button>
+            <button onclick="openUploadModal()" class="bg-gradient-to-r from-indigo-500 to-fuchsia-600 hover:from-indigo-600 hover:to-fuchsia-700 text-white font-medium px-4 py-2 rounded-xl text-sm shadow-lg shadow-indigo-500/25 transition-all duration-300 flex items-center space-x-2">
+                <i class="fa-solid fa-plus"></i>
+                <span>Upload Files</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 flex flex-col z-10">
+        
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            <div class="glass-card rounded-2xl p-5 flex items-center justify-between shadow-lg">
+                <div>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Files</p>
+                    <h3 id="stat-total-files" class="text-2xl font-bold mt-1 text-white">0</h3>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                    <i class="fa-solid fa-file-lines text-xl"></i>
+                </div>
+            </div>
+            <div class="glass-card rounded-2xl p-5 flex items-center justify-between shadow-lg">
+                <div>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Storage Used</p>
+                    <h3 id="stat-storage-used" class="text-2xl font-bold mt-1 text-white">0 KB</h3>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-fuchsia-500/20 border border-fuchsia-500/30 flex items-center justify-center text-fuchsia-400">
+                    <i class="fa-solid fa-hard-drive text-xl"></i>
+                </div>
+            </div>
+            <div class="glass-card rounded-2xl p-5 flex items-center justify-between shadow-lg">
+                <div>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Active Categories</p>
+                    <h3 id="stat-categories" class="text-2xl font-bold mt-1 text-white">All Active</h3>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                    <i class="fa-solid fa-folder-open text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toolbar & Search Filters -->
+        <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-6">
+            <div class="flex items-center space-x-2 overflow-x-auto pb-2 md:pb-0">
+                <button onclick="setFilter('all')" id="filter-all" class="px-4 py-2 rounded-xl text-sm font-medium transition-all bg-indigo-600 text-white shadow-md shadow-indigo-500/30 whitespace-nowrap">All Files</button>
+                <button onclick="setFilter('image')" id="filter-image" class="px-4 py-2 rounded-xl text-sm font-medium transition-all bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 whitespace-nowrap">Images</button>
+                <button onclick="setFilter('document')" id="filter-document" class="px-4 py-2 rounded-xl text-sm font-medium transition-all bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 whitespace-nowrap">Documents</button>
+                <button onclick="setFilter('media')" id="filter-media" class="px-4 py-2 rounded-xl text-sm font-medium transition-all bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 whitespace-nowrap">Media</button>
+                <button onclick="setFilter('other')" id="filter-other" class="px-4 py-2 rounded-xl text-sm font-medium transition-all bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 whitespace-nowrap">Others</button>
+            </div>
+            <div class="flex items-center space-x-3">
+                <div class="relative flex-grow md:w-64">
+                    <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                    <input type="text" id="search-input" oninput="handleSearch()" placeholder="Search files..." class="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-200 placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-all">
+                </div>
+                <div class="flex items-center bg-white/5 border border-white/10 rounded-xl p-1">
+                    <button onclick="setViewMode('grid')" id="view-grid-btn" class="p-2 rounded-lg text-indigo-400 bg-white/10 transition-all"><i class="fa-solid fa-grid-2"></i></button>
+                    <button onclick="setViewMode('list')" id="view-list-btn" class="p-2 rounded-lg text-slate-400 hover:text-white transition-all"><i class="fa-solid fa-list"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Files List Grid -->
+        <div id="files-container" class="flex-grow">
+            <!-- Populated dynamically -->
+        </div>
+
+    </main>
+
+    <footer class="w-full border-t border-white/10 py-6 text-center text-xs text-slate-500 glass-card mt-auto">
+        <p>AetherCloud &bull; High-performance responsive file management system designed with glassmorphic aesthetics.</p>
+    </footer>
+
+    <!-- UPLOAD MODAL -->
+    <div id="upload-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden opacity-0 transition-opacity duration-300">
+        <div class="glass-modal w-full max-w-2xl rounded-3xl p-6 md:p-8 shadow-2xl relative transform scale-95 transition-transform duration-300" id="upload-modal-content">
+            <button onclick="closeUploadModal()" class="absolute top-5 right-5 text-slate-400 hover:text-white w-8 h-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            
+            <h2 class="text-xl font-bold text-white mb-2 flex items-center space-x-2">
+                <i class="fa-solid fa-cloud-arrow-up text-indigo-400"></i>
+                <span>Upload Files</span>
+            </h2>
+            <p class="text-sm text-slate-400 mb-6">Drag and drop your files below or browse from your computer.</p>
+
+            <div id="dropzone" class="border-2 border-dashed border-indigo-500/40 hover:border-indigo-500 rounded-2xl p-8 text-center flex flex-col items-center justify-center bg-indigo-500/5 hover:bg-indigo-500/10 transition-all cursor-pointer relative group">
+                <input type="file" id="file-input" multiple class="absolute inset-0 opacity-0 cursor-pointer" onchange="handleFileSelect(event)">
+                <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500/20 to-fuchsia-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-4 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-folder-open text-2xl"></i>
+                </div>
+                <h3 class="text-base font-semibold text-white mb-1">Drag & drop files here</h3>
+                <p class="text-xs text-slate-400 mb-4">Support for images, documents, archives, code and media</p>
+                <span class="px-4 py-2 rounded-xl bg-white/10 border border-white/10 text-xs font-medium text-indigo-300 group-hover:bg-indigo-600 group-hover:text-white transition-all">Browse Files</span>
+            </div>
+
+            <div id="upload-queue" class="mt-6 space-y-3 max-h-60 overflow-y-auto pr-1 hidden"></div>
+
+            <div class="mt-6 flex justify-end space-x-3">
+                <button onclick="closeUploadModal()" class="px-5 py-2.5 rounded-xl text-sm font-medium bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition-all">Done / Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PREVIEW MODAL -->
+    <div id="preview-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden opacity-0 transition-opacity duration-300">
+        <div class="glass-modal w-full max-w-xl rounded-3xl p-6 md:p-8 shadow-2xl relative transform scale-95 transition-transform duration-300" id="preview-modal-content">
+            <button onclick="closePreviewModal()" class="absolute top-5 right-5 text-slate-400 hover:text-white w-8 h-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            
+            <div class="flex items-center space-x-4 mb-6">
+                <div id="preview-icon-wrapper" class="w-14 h-14 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-2xl flex-shrink-0">
+                    <i class="fa-solid fa-file"></i>
+                </div>
+                <div class="overflow-hidden">
+                    <h3 id="preview-filename" class="text-lg font-bold text-white truncate">Filename.ext</h3>
+                    <p id="preview-filesize" class="text-xs text-slate-400">0 KB &bull; Uploaded just now</p>
+                </div>
+            </div>
+
+            <div id="preview-body" class="w-full bg-slate-950/50 rounded-2xl border border-white/10 p-4 mb-6 flex items-center justify-center min-h-[180px] max-h-[300px] overflow-auto"></div>
+
+            <div class="flex items-center justify-end space-x-3">
+                <button onclick="downloadCurrentFile()" class="px-4 py-2.5 rounded-xl text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 transition-all flex items-center space-x-2">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Download</span>
+                </button>
+                <button onclick="deleteCurrentFile()" class="px-4 py-2.5 rounded-xl text-sm font-medium bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 transition-all flex items-center space-x-2">
+                    <i class="fa-solid fa-trash"></i>
+                    <span>Delete</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WEB LINK SHARE MODAL -->
+    <div id="share-web-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden opacity-0 transition-opacity duration-300">
+        <div class="glass-modal w-full max-w-md rounded-3xl p-6 shadow-2xl relative transform scale-95 transition-transform duration-300" id="share-web-modal-content">
+            <button onclick="closeShareWebModal()" class="absolute top-5 right-5 text-slate-400 hover:text-white w-8 h-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500/20 to-fuchsia-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-xl mb-4">
+                <i class="fa-solid fa-link"></i>
+            </div>
+
+            <h3 class="text-lg font-bold text-white mb-1">Web App Share Link</h3>
+            <p class="text-xs text-slate-400 mb-4">Direct link to access and use the AetherCloud file management website.</p>
+
+            <div class="bg-slate-950/60 border border-white/10 rounded-2xl p-3 mb-5 flex items-center space-x-2">
+                <input type="text" id="app-web-url" readonly class="bg-transparent w-full text-xs text-indigo-300 focus:outline-none truncate">
+                <button onclick="copyAppWebUrl()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-all flex items-center space-x-1.5 flex-shrink-0">
+                    <i class="fa-solid fa-copy"></i>
+                    <span>Copy</span>
+                </button>
+            </div>
+
+            <div class="flex justify-end">
+                <button onclick="closeShareWebModal()" class="px-4 py-2 rounded-xl text-xs font-medium bg-white/10 hover:bg-white/20 text-slate-200 transition-all">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 glass-card bg-slate-900/90 border border-white/15 px-4 py-3 rounded-2xl shadow-2xl flex items-center space-x-3">
+        <div id="toast-icon" class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+            <i class="fa-solid fa-check"></i>
+        </div>
+        <div>
+            <h4 id="toast-title" class="text-sm font-semibold text-white">Success</h4>
+            <p id="toast-msg" class="text-xs text-slate-400">Action completed successfully.</p>
+        </div>
+    </div>
+
+    <script>
+        // Global State
+        let filesList = [
+            {
+                id: '1',
+                name: 'Project_Architecture.png',
+                size: 2450000,
+                type: 'image/png',
+                category: 'image',
+                date: new Date(Date.now() - 3600000 * 2).toISOString(),
+                dataUrl: 'https://placehold.co/600x400/4f46e5/ffffff?text=Project+Architecture'
+            },
+            {
+                id: '2',
+                name: 'Q3_Financial_Report.pdf',
+                size: 1420000,
+                type: 'application/pdf',
+                category: 'document',
+                date: new Date(Date.now() - 3600000 * 24).toISOString(),
+                dataUrl: null
+            },
+            {
+                id: '3',
+                name: 'Product_Demo_Reel.mp4',
+                size: 18500000,
+                type: 'video/mp4',
+                category: 'media',
+                date: new Date(Date.now() - 3600000 * 48).toISOString(),
+                dataUrl: null
+            }
+        ];
+
+        let currentFilter = 'all';
+        let currentSearchQuery = '';
+        let currentViewMode = 'grid';
+        let activePreviewFileId = null;
+
+        window.addEventListener('DOMContentLoaded', function() {
+            renderFiles();
+            updateStatistics();
+
+            const dropzone = document.getElementById('dropzone');
+            ['dragenter', 'dragover'].forEach(function(eventName) {
+                dropzone.addEventListener(eventName, function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.classList.add('border-indigo-500', 'bg-indigo-500/20');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(function(eventName) {
+                dropzone.addEventListener(eventName, function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.classList.remove('border-indigo-500', 'bg-indigo-500/20');
+                }, false);
+            });
+
+            dropzone.addEventListener('drop', function(e) {
+                const dt = e.dataTransfer;
+                const droppedFiles = dt.files;
+                if (droppedFiles.length > 0) {
+                    openUploadModal();
+                    processFiles(droppedFiles);
+                }
+            });
+        });
+
+        function formatBytes(bytes, decimals) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : (decimals || 2);
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+
+        function getCategory(type) {
+            if (type.startsWith('image/')) return 'image';
+            if (type.indexOf('pdf') !== -1 || type.indexOf('document') !== -1 || type.indexOf('sheet') !== -1 || type.indexOf('text') !== -1) return 'document';
+            if (type.startsWith('video/') || type.startsWith('audio/')) return 'media';
+            return 'other';
+        }
+
+        function getFileIcon(type, category) {
+            if (category === 'image') return '<i class="fa-solid fa-file-image text-emerald-400"></i>';
+            if (category === 'document') return '<i class="fa-solid fa-file-lines text-amber-400"></i>';
+            if (category === 'media') return '<i class="fa-solid fa-file-video text-rose-400"></i>';
+            if (type.indexOf('zip') !== -1 || type.indexOf('tar') !== -1) return '<i class="fa-solid fa-file-zipper text-purple-400"></i>';
+            return '<i class="fa-solid fa-file-code text-cyan-400"></i>';
+        }
+
+        function updateStatistics() {
+            const totalFiles = filesList.length;
+            const totalBytes = filesList.reduce(function(acc, file) { return acc + file.size; }, 0);
+            
+            document.getElementById('stat-total-files').innerText = totalFiles;
+            document.getElementById('stat-storage-used').innerText = formatBytes(totalBytes);
+            document.getElementById('storage-summary-text').innerText = formatBytes(totalBytes) + ' used of 1 GB';
+        }
+
+        window.setFilter = function(filter) {
+            currentFilter = filter;
+            ['all', 'image', 'document', 'media', 'other'].forEach(function(f) {
+                const btn = document.getElementById('filter-' + f);
+                if (f === filter) {
+                    btn.className = "px-4 py-2 rounded-xl text-sm font-medium transition-all bg-indigo-600 text-white shadow-md shadow-indigo-500/30 whitespace-nowrap";
+                } else {
+                    btn.className = "px-4 py-2 rounded-xl text-sm font-medium transition-all bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 whitespace-nowrap";
+                }
+            });
+            document.getElementById('stat-categories').innerText = filter === 'all' ? 'All Active' : filter.charAt(0).toUpperCase() + filter.slice(1);
+            renderFiles();
+        };
+
+        window.handleSearch = function() {
+            currentSearchQuery = document.getElementById('search-input').value.toLowerCase();
+            renderFiles();
+        };
+
+        window.setViewMode = function(mode) {
+            currentViewMode = mode;
+            const gridBtn = document.getElementById('view-grid-btn');
+            const listBtn = document.getElementById('view-list-btn');
+            if (mode === 'grid') {
+                gridBtn.className = "p-2 rounded-lg text-indigo-400 bg-white/10 transition-all";
+                listBtn.className = "p-2 rounded-lg text-slate-400 hover:text-white transition-all";
+            } else {
+                listBtn.className = "p-2 rounded-lg text-indigo-400 bg-white/10 transition-all";
+                gridBtn.className = "p-2 rounded-lg text-slate-400 hover:text-white transition-all";
+            }
+            renderFiles();
+        };
+
+        function renderFiles() {
+            const container = document.getElementById('files-container');
+            
+            let filtered = filesList.filter(function(file) {
+                const matchesFilter = currentFilter === 'all' || file.category === currentFilter;
+                const matchesSearch = file.name.toLowerCase().indexOf(currentSearchQuery) !== -1;
+                return matchesFilter && matchesSearch;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="glass-card rounded-3xl p-12 text-center flex flex-col items-center justify-center">
+                        <div class="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 text-2xl mb-4">
+                            <i class="fa-solid fa-folder-open"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-1">No files found</h3>
+                        <p class="text-sm text-slate-400 mb-6">Upload new files or adjust your search filter criteria.</p>
+                        <button onclick="openUploadModal()" class="px-5 py-2.5 rounded-xl text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-lg shadow-indigo-500/20">Upload Files</button>
+                    </div>
+                `;
+                return;
+            }
+
+            if (currentViewMode === 'grid') {
+                let html = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">';
+                filtered.forEach(function(file) {
+                    const iconHtml = getFileIcon(file.type, file.category);
+                    const timeAgo = timeSince(new Date(file.date));
+                    html += `
+                        <div onclick="openPreviewModal('${file.id}')" class="glass-card glass-card-hover rounded-2xl p-4 cursor-pointer transition-all duration-300 flex flex-col justify-between group relative">
+                            <div>
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-xl group-hover:scale-105 transition-transform">
+                                        ${iconHtml}
+                                    </div>
+                                    <button onclick="event.stopPropagation(); deleteFile('${file.id}')" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-rose-500/20 hover:text-rose-300 text-slate-400 flex items-center justify-center transition-colors">
+                                        <i class="fa-solid fa-trash text-xs"></i>
+                                    </button>
+                                </div>
+                                <h4 class="font-semibold text-sm text-white truncate mb-1" title="${file.name}">${file.name}</h4>
+                                <p class="text-xs text-slate-400">${formatBytes(file.size)}</p>
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs text-slate-500">
+                                <span>${timeAgo}</span>
+                                <span class="uppercase text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-indigo-300">${file.category}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            } else {
+                let html = '<div class="glass-card rounded-2xl overflow-hidden divide-y divide-white/5">';
+                filtered.forEach(function(file) {
+                    const iconHtml = getFileIcon(file.type, file.category);
+                    const timeAgo = timeSince(new Date(file.date));
+                    html += `
+                        <div onclick="openPreviewModal('${file.id}')" class="p-4 flex items-center justify-between hover:bg-white/5 cursor-pointer transition-all">
+                            <div class="flex items-center space-x-3 overflow-hidden">
+                                <div class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-lg flex-shrink-0">
+                                    ${iconHtml}
+                                </div>
+                                <div class="overflow-hidden">
+                                    <h4 class="font-semibold text-sm text-white truncate">${file.name}</h4>
+                                    <p class="text-xs text-slate-400">${formatBytes(file.size)} &bull; Uploaded ${timeAgo}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <span class="hidden sm:inline-block uppercase text-[10px] px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-indigo-300">${file.category}</span>
+                                <button onclick="event.stopPropagation(); deleteFile('${file.id}')" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-rose-500/20 hover:text-rose-300 text-slate-400 flex items-center justify-center transition-colors">
+                                    <i class="fa-solid fa-trash text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            }
+        }
+
+        function timeSince(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            let interval = seconds / 31536000;
+            if (interval > 1) return Math.floor(interval) + " years ago";
+            interval = seconds / 2592000;
+            if (interval > 1) return Math.floor(interval) + " months ago";
+            interval = seconds / 86400;
+            if (interval > 1) return Math.floor(interval) + " days ago";
+            interval = seconds / 3600;
+            if (interval > 1) return Math.floor(interval) + " hours ago";
+            interval = seconds / 60;
+            if (interval > 1) return Math.floor(interval) + " mins ago";
+            return "Just now";
+        }
+
+        window.openUploadModal = function() {
+            const modal = document.getElementById('upload-modal');
+            const content = document.getElementById('upload-modal-content');
+            modal.classList.remove('hidden');
+            setTimeout(function() {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        };
+
+        window.closeUploadModal = function() {
+            const modal = document.getElementById('upload-modal');
+            const content = document.getElementById('upload-modal-content');
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(function() {
+                modal.classList.add('hidden');
+                document.getElementById('upload-queue').classList.add('hidden');
+                document.getElementById('upload-queue').innerHTML = '';
+            }, 300);
+        };
+
+        window.handleFileSelect = function(event) {
+            const files = event.target.files;
+            if (files.length > 0) {
+                processFiles(files);
+            }
+        };
+
+        function processFiles(files) {
+            const queueContainer = document.getElementById('upload-queue');
+            queueContainer.classList.remove('hidden');
+
+            Array.from(files).forEach(function(file, index) {
+                const fileId = 'upload-' + Date.now() + '-' + index;
+                const category = getCategory(file.type);
+
+                const queueItem = document.createElement('div');
+                queueItem.id = fileId;
+                queueItem.className = "bg-white/5 border border-white/10 rounded-xl p-3";
+                queueItem.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center space-x-2 truncate">
+                            <span class="text-sm">${getFileIcon(file.type, category)}</span>
+                            <span class="text-sm font-medium text-white truncate max-w-[220px] sm:max-w-xs">${file.name}</span>
+                        </div>
+                        <span id="${fileId}-status" class="text-xs text-indigo-400 font-medium">Uploading...</span>
+                    </div>
+                    <div class="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+                        <div id="${fileId}-bar" class="bg-gradient-to-r from-indigo-500 to-fuchsia-500 h-2 rounded-full transition-all duration-200" style="width: 0%"></div>
+                    </div>
+                `;
+                queueContainer.appendChild(queueItem);
+
+                let progress = 0;
+                const interval = setInterval(function() {
+                    progress += Math.floor(Math.random() * 20) + 15;
+                    if (progress >= 100) {
+                        progress = 100;
+                        clearInterval(interval);
+                        document.getElementById(fileId + '-status').innerText = 'Completed';
+                        document.getElementById(fileId + '-status').className = "text-xs text-emerald-400 font-medium";
+
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const dataResult = e.target.result;
+                            const newFileObj = {
+                                id: 'file-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+                                name: file.name,
+                                size: file.size,
+                                type: file.type || 'application/octet-stream',
+                                category: category,
+                                date: new Date().toISOString(),
+                                dataUrl: dataResult
+                            };
+                            filesList.unshift(newFileObj);
+                            renderFiles();
+                            updateStatistics();
+                        };
+                        
+                        // Read as Data URL so we can preview all uploaded files (images, texts, audio, video, pdfs)
+                        reader.readAsDataURL(file);
+                    }
+                    document.getElementById(fileId + '-bar').style.width = progress + '%';
+                }, 120);
+            });
+
+            showToast('Upload initiated', 'Your files are being securely uploaded.');
+        }
+
+        window.openPreviewModal = function(fileId) {
+            activePreviewFileId = fileId;
+            const file = filesList.find(function(f) { return f.id === fileId; });
+            if (!file) return;
+
+            document.getElementById('preview-filename').innerText = file.name;
+            document.getElementById('preview-filesize').innerText = formatBytes(file.size) + ' \u2022 Uploaded ' + timeSince(new Date(file.date));
+            document.getElementById('preview-filetype').innerText = file.type || 'Unknown';
+            document.getElementById('preview-filedate').innerText = new Date(file.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            
+            // Generate shareable link representation
+            const fakeShareUrl = window.location.origin + window.location.pathname + '#share/' + file.id + '/' + encodeURIComponent(file.name);
+            document.getElementById('preview-share-link').value = fakeShareUrl;
+
+            document.getElementById('preview-icon-wrapper').innerHTML = getFileIcon(file.type, file.category);
+
+            const previewBody = document.getElementById('preview-body');
+            if (file.category === 'image' && file.dataUrl) {
+                previewBody.innerHTML = `<img src="${file.dataUrl}" alt="${file.name}" class="max-h-[260px] rounded-xl object-contain shadow-md">`;
+            } else if (file.dataUrl && (file.type.indexOf('text/') !== -1 || file.type.indexOf('json') !== -1 || file.type.indexOf('html') !== -1)) {
+                // Try reading text data URL or show summary
+                previewBody.innerHTML = `<div class="p-3 bg-slate-900 rounded-xl text-xs text-slate-300 font-mono overflow-auto max-h-[220px] w-full text-left">File Ready for Preview and Download.</div>`;
+            } else if (file.dataUrl) {
+                previewBody.innerHTML = `<iframe src="${file.dataUrl}" class="w-full h-[220px] rounded-xl border-0"></iframe>`;
+            } else {
+                previewBody.innerHTML = `
+                    <div class="text-center py-6">
+                        <div class="text-4xl text-indigo-400 mb-2">${getFileIcon(file.type, file.category)}</div>
+                        <p class="text-sm font-medium text-slate-300">File uploaded and ready</p>
+                        <p class="text-xs text-slate-500 mt-1">Click "Open in New Tab" or download to access the file.</p>
+                    </div>
+                `;
+            }
+
+            const modal = document.getElementById('preview-modal');
+            const content = document.getElementById('preview-modal-content');
+            modal.classList.remove('hidden');
+            setTimeout(function() {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        };
+
+        window.closePreviewModal = function() {
+            const modal = document.getElementById('preview-modal');
+            const content = document.getElementById('preview-modal-content');
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(function() {
+                modal.classList.add('hidden');
+                activePreviewFileId = null;
+            }, 300);
+        };
+
+        window.copyShareLink = function() {
+            const linkInput = document.getElementById('preview-share-link');
+            linkInput.select();
+            linkInput.setSelectionRange(0, 99999);
+            document.execCommand('copy');
+            showToast('Link copied', 'Shareable link copied to clipboard.');
+        };
+
+        window.openOriginalFile = function() {
+            const file = filesList.find(function(f) { return f.id === activePreviewFileId; });
+            if (!file) return;
+
+            if (file.dataUrl) {
+                const w = window.open('');
+                w.document.write(file.category === 'image' ? '<img src="' + file.dataUrl + '" style="max-width:100%">' : '<iframe src="' + file.dataUrl + '" style="width:100%;height:100vh;border:none;"></iframe>');
+            } else {
+                const blob = new Blob(["Sample file stream for " + file.name], { type: file.type || 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                window.open(url, '_blank');
+            }
+        };
+
+        window.deleteFile = function(fileId) {
+            filesList = filesList.filter(function(f) { return f.id !== fileId; });
+            renderFiles();
+            updateStatistics();
+            showToast('File deleted', 'The file was successfully removed from storage.', 'rose');
+        };
+
+        window.deleteCurrentFile = function() {
+            if (activePreviewFileId) {
+                window.deleteFile(activePreviewFileId);
+                window.closePreviewModal();
+            }
+        };
+
+        window.downloadCurrentFile = function() {
+            const file = filesList.find(function(f) { return f.id === activePreviewFileId; });
+            if (!file) return;
+            
+            const element = document.createElement('a');
+            if (file.dataUrl) {
+                element.setAttribute('href', file.dataUrl);
+            } else {
+                const blob = new Blob(["Sample binary content for " + file.name], { type: file.type });
+                element.setAttribute('href', URL.createObjectURL(blob));
+            }
+            element.setAttribute('download', file.name);
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+
+            showToast('Download started', 'Downloading ' + file.name + '...');
+        };
+
+        window.shareWebAppLink = function() {
+            const currentUrl = window.location.href || 'https://aethercloud.app';
+            document.getElementById('app-web-url').value = currentUrl;
+
+            const modal = document.getElementById('share-web-modal');
+            const content = document.getElementById('share-web-modal-content');
+            modal.classList.remove('hidden');
+            setTimeout(function() {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        };
+
+        window.closeShareWebModal = function() {
+            const modal = document.getElementById('share-web-modal');
+            const content = document.getElementById('share-web-modal-content');
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(function() {
+                modal.classList.add('hidden');
+            }, 300);
+        };
+
+        window.copyAppWebUrl = function() {
+            const input = document.getElementById('app-web-url');
+            input.select();
+            document.execCommand('copy');
+            showToast('Link Copied!', 'AetherCloud web app link copied to clipboard.');
+        };
+
+        function showToast(title, msg, type) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-title').innerText = title;
+            document.getElementById('toast-msg').innerText = msg;
+            
+            const iconWrapper = document.getElementById('toast-icon');
+            if (type === 'rose') {
+                iconWrapper.className = "w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center";
+                iconWrapper.innerHTML = '<i class="fa-solid fa-trash"></i>';
+            } else {
+                iconWrapper.className = "w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center";
+                iconWrapper.innerHTML = '<i class="fa-solid fa-check"></i>';
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(function() {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
